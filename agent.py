@@ -13,10 +13,41 @@ Build and test your three tools in `tools.py` first. Then come here.
     python agent.py          runs both example paths below
 """
 
+import re
+
 import config
 import trace
 from tools import search_listings, suggest_outfit, create_fit_card
 from generate import ModelUnavailable
+
+_SIZE_RE = re.compile(r"\bsize[:\s]+([A-Za-z0-9/]+)", re.IGNORECASE)
+_PRICE_RE = re.compile(
+    r"(?:under|below|less than|max(?:imum)?)?\s*\$\s*(\d+(?:\.\d+)?)",
+    re.IGNORECASE,
+)
+
+
+def _parse_query(query: str) -> dict:
+    """
+    Pull a description, a size, and a max_price out of a plain-language query.
+
+    Regex-based, per the README: a "size ..." token sets size, a "$..."
+    amount (optionally preceded by "under"/"below"/"less than"/"max") sets
+    max_price, and whatever text is left — with those matches stripped out —
+    becomes the description.
+    """
+    size_match = _SIZE_RE.search(query)
+    price_match = _PRICE_RE.search(query)
+
+    description = _SIZE_RE.sub("", query)
+    description = _PRICE_RE.sub("", description)
+    description = re.sub(r"\s+", " ", description).strip(" ,.-")
+
+    return {
+        "description": description,
+        "size": size_match.group(1) if size_match else None,
+        "max_price": float(price_match.group(1)) if price_match else None,
+    }
 
 
 # ── session state ─────────────────────────────────────────────────────────────
@@ -97,18 +128,37 @@ def run_agent(query: str, wardrobe: dict) -> dict:
       8. Return the session.
 
     ─────────────────────────────────────────────────────────────────────────
-    IN UNIT 4 you come back and add two things:
-
-      • Trace calls. One per step. `trace.step("search_listings", inputs=...,
-        returned=...)` — see trace.py. Your README needs the output.
-
-      • A handler for ModelUnavailable, so a bad key produces a message rather
-        than a stack trace. The import is already at the top of this file.
+   
     """
     session = new_session(query, wardrobe)
 
-    # TODO: delete these two lines and build the loop.
-    session["error"] = "The planning loop isn't built yet — see the TODO in agent.py."
+    trace.check_iterations(1)
+
+    session["parsed"] = _parse_query(query)
+
+    session["search_results"] = search_listings(
+        description=session["parsed"]["description"],
+        size=session["parsed"]["size"],
+        max_price=session["parsed"]["max_price"],
+    )
+
+    if not session["search_results"]:
+        session["error"] = (
+            "No listings matched — try a broader description, a different "
+            "size, or a higher max price."
+        )
+        return session
+
+    session["selected_item"] = session["search_results"][0]
+
+    session["outfit_suggestion"] = suggest_outfit(
+        session["selected_item"], session["wardrobe"]
+    )
+
+    session["fit_card"] = create_fit_card(
+        session["outfit_suggestion"], session["selected_item"]
+    )
+
     return session
 
 

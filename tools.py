@@ -27,11 +27,14 @@ from generate import generate
 from utils.data_loader import load_listings
 
 _WORD_RE = re.compile(r"[a-z0-9]+")
+_APOSTROPHE_RE = re.compile(r"['’]")
 _SIZE_SPLIT_RE = re.compile(r"[\s/()]+")
 
 
 def _tokenize(text: str) -> set[str]:
-    return set(_WORD_RE.findall(text.lower()))
+    # Strip apostrophes before splitting so "Levi's" tokenizes to "levis",
+    # not "levi" + a stray "s" that would match any one-letter query.
+    return set(_WORD_RE.findall(_APOSTROPHE_RE.sub("", text.lower())))
 
 
 def _size_tokens(size: str) -> set[str]:
