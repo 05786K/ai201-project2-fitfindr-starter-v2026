@@ -25,9 +25,7 @@ Given a query that matches at least one listing, the agent completes all three
 tool calls and returns a fit card — in at least 4 of 5 tries.
 
 **Why this target:**
-<!-- Why 4 of 5 and not 5 of 5? Something about your search, probably —
-     "my search is a plain keyword match and some phrasings will miss" is a
-     real answer. -->
+The search and outfit tools depend on the listing data and model responses, so occasional variation can cause a run to fail. A 4-of-5 target requires the complete happy path to work reliably without demanding perfection from model-dependent calls.
 
 ---
 
@@ -37,13 +35,10 @@ Given a query that matches no listings, the agent stops before calling
 `suggest_outfit` and returns a message naming what to change — 5 of 5 tries.
 
 **Why this target:**
-<!-- Why is 5 of 5 reasonable here when criterion 1 isn't? What's different
-     about this path? -->
-
+An empty search result is deterministic: there is no listing to pass to the outfit tool. Because the loop can directly check whether the search returned any results, this branch should behave consistently every time rather than depending on model output.
 ---
 
-## 3. Something about state
-
+## 3. An item is passed through session state correctly
 <!-- YOU WRITE THIS ONE.
 
      How would you know that the item your search found is the same item the
@@ -54,16 +49,15 @@ Given a query that matches no listings, the agent stops before calling
      compares session["selected_item"] against what actually reached
      suggest_outfit is the shape you're after. -->
 
-
+For 5 matching queries, the item passed to suggest_outfit must be the same listing selected by search_listings in all 5 runs, with the item's `name`, `price`, and `size` matching exactly between the two tool calls.
 
 **Why this target:**
-
+Passing the search result through session state is a required part of the agent design. Testing five runs makes it difficult for a state bug to pass by chance, while comparing identifiable fields such as the listing name, price, and size makes the state transfer directly observable.
 
 
 ---
 
-## 4. Something about the fit card
-
+## 4. The fit card reflects both the selected item and the outfit
 <!-- YOU WRITE THIS ONE.
 
      The fit card calls a model, so the same input can produce different words
@@ -74,28 +68,27 @@ Given a query that matches no listings, the agent stops before calling
      mentions the price? Two different items producing the same opening
      sentence? A card longer than a caption anyone would post? Any of those can
      be turned into a number. -->
-
+For 5 successful runs, every fit card must include at least two of: the listing's name, price, or size, and at least one named outfit piece from suggest_outfit's result, while staying at 50 words or fewer.
 
 
 **Why this target:**
-
+A fit card should be based on the actual results of the agent rather than being a generic caption. Requiring details from both the listing and the generated outfit verifies that information is carried through the full tool chain, while the 50-word limit keeps the result short enough to be a realistic post caption.
 
 
 ---
 
-## 5. Your choice
-
+## 5. Search respects the user's size and price constraints
 <!-- YOU WRITE THIS ONE TOO.
 
      Pick something you actually care about getting right. Speed, the empty
      wardrobe path, what happens when the model can't be reached, whether the
      search respects a price ceiling — anything, as long as it names a number
      or an observable outcome. -->
-
+For 5 matching queries that specify both a size and a maximum price, every listing passed to suggest_outfit must match the requested size and have a price at or below the requested maximum in all 5 runs.
 
 
 **Why this target:**
-
+Size and price are both explicit inputs to search_listings, so returning an item that violates either constraint would give the agent a result the user did not ask for. Requiring both constraints to hold across all 5 runs makes the search behavior consistently testable rather than checking only one filter at a time.
 
 
 ---

@@ -38,11 +38,7 @@
 <!-- ═══════════════════════ UNIT 3 — THE BUILD ═══════════════════════ -->
 
 ## What This Does
-
-<!-- Three or four sentences: what a user asks for, and what they get back. -->
-
-
-
+FitFindr lets a user ask for a secondhand clothing item using a description, size, and maximum price. The agent searches the listings data for matching items and uses the selected listing as the input for the next step. It then generates outfit ideas using the user's wardrobe and creates a short fit-card caption. If no listings are found, the agent stops and tells the user what they can change.
 ---
 
 ## Tool Inventory
@@ -59,24 +55,31 @@
 
 ### `search_listings`
 
-- **What it does:**
-- **Inputs:** <!-- name and type each: `max_price` (float), not "a price" -->
-- **Returns:**
-- **When it has nothing:**
+- **What it does:** Filters the listings data by size and max price, scores what's left by keyword overlap with the description, and returns the best match first.
+- **Inputs:** 
+     `description` (str) — keywords describing what the user wants; 
+     `size` (str | None, default None) — size to filter by, skipped when None. Size matching is case-insensitive and uses exact token matching after splitting listing sizes on spaces, slashes, and parentheses. 
+     `max_price` (float | None, default None) — inclusive price ceiling, skipped when None.
+- **Returns:** A list of listing dicts, each with `id`, `title`, `description`, `category`, `style_tags` (list), `size`, `condition`, `price` (float), `colors` (list), `brand` (str or None), `platform` (str) — sorted by keyword-overlap score, highest first, capped at `config.SEARCH_RESULT_LIMIT` (10) items.
+- **When it has nothing:** Returns an empty list — not `None`, not an exception — when no listing scores above zero after filtering.
 
 ### `suggest_outfit`
 
-- **What it does:**
-- **Inputs:**
-- **Returns:**
-- **When it has nothing:**
+- **What it does:** Calls the model to suggest one or two outfits pairing a selected listing with pieces from the user's wardrobe.
+- **Inputs:** 
+     `new_item` (dict) — the listing dict chosen from `search_listings`'s results. 
+     `wardrobe` (dict) — a dict with an `items` key holding a list of wardrobe item dicts, which may be empty.
+- **Returns:** A non-empty string describing the suggested outfit(s).
+- **When it has nothing:** When `wardrobe['items']` is empty, returns general styling advice for the item (still a non-empty string) instead of raising or returning `""`.
 
 ### `create_fit_card`
 
-- **What it does:**
-- **Inputs:**
-- **Returns:**
-- **When it has nothing:**
+- **What it does:** Writes a short, social-media-style caption (2-4 sentences) about the find, naming the item, its price, and its platform once each, and referencing the suggested outfit.
+- **Inputs:** 
+     `outfit` (str) — the outfit suggestion string returned by `suggest_outfit`
+     `new_item` (dict) — the listing dict for the item
+- **Returns:** A 2-4 sentence caption string.
+- **When it has nothing:** When `outfit` is empty or whitespace-only, returns a fixed descriptive string (e.g. `"No fit card available — no outfit suggestion was generated for this item."`) instead of raising.
 
 ---
 
@@ -93,13 +96,13 @@
      The grader checks your code against what you claim here, so the file and
      function have to be real. -->
 
-**Branch rule:**
+**Branch rule:** If `search_listings` returns an empty list, put a message in `session["error"]` naming what the user could change (size, price, or description) and return the session without calling `suggest_outfit`. Otherwise, take the first result as `session["selected_item"]` and continue on to `suggest_outfit` and then `create_fit_card`.
 
 **Where it lives:** `agent.py::run_agent`
 
-**How the query is parsed:** <!-- regex, string splitting, or asking the model — say which -->
+**How the query is parsed:** Regex — patterns pull out a size (e.g. "size M") and a max price (e.g. "under $30"); whatever's left of the query becomes the description passed to `search_listings`.
 
-**What moves through the session:** <!-- which fields, in what order -->
+**What moves through the session:** `query` (the raw input) → `parsed` (description/size/max_price pulled from it) → `search_results` (everything `search_listings` returned) → `selected_item` (the first result, passed to `suggest_outfit` and `create_fit_card`) → `outfit_suggestion` → `fit_card`. `wardrobe` is carried unchanged from the start, and `error` is set only when the loop stops early.
 
 ---
 
