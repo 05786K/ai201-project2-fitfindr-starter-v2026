@@ -69,7 +69,7 @@ FitFindr lets a user ask for a secondhand clothing item using a description, siz
 - **Inputs:** 
      `new_item` (dict) — the listing dict chosen from `search_listings`'s results. 
      `wardrobe` (dict) — a dict with an `items` key holding a list of wardrobe item dicts, which may be empty.
-- **Returns:** A non-empty string describing the suggested outfit(s).
+- **Returns:** A non-empty string describing the suggested outfit(s), naming at least one wardrobe item by its exact `name` string.
 - **When it has nothing:** When `wardrobe['items']` is empty, returns general styling advice for the item (still a non-empty string) instead of raising or returning `""`.
 
 ### `create_fit_card`
@@ -100,7 +100,7 @@ FitFindr lets a user ask for a secondhand clothing item using a description, siz
 
 **Where it lives:** `agent.py::run_agent`
 
-**How the query is parsed:** Regex — patterns pull out a size (e.g. "size M") and a max price (e.g. "under $30"); whatever's left of the query becomes the description passed to `search_listings`.
+**How the query is parsed:** Regex — patterns pull out a size (e.g. "size M") and a max price (e.g. "under $30"), whatever's left of the query becomes the description passed to `search_listings`.
 
 **What moves through the session:** `query` (the raw input) → `parsed` (description/size/max_price pulled from it) → `search_results` (everything `search_listings` returned) → `selected_item` (the first result, passed to `suggest_outfit` and `create_fit_card`) → `outfit_suggestion` → `fit_card`. `wardrobe` is carried unchanged from the start, and `error` is set only when the loop stops early.
 

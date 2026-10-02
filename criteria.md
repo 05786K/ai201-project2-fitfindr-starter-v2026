@@ -49,10 +49,10 @@ An empty search result is deterministic: there is no listing to pass to the outf
      compares session["selected_item"] against what actually reached
      suggest_outfit is the shape you're after. -->
 
-For 5 matching queries, the item passed to suggest_outfit must be the same listing selected by search_listings in all 5 runs, with the item's `name`, `price`, and `size` matching exactly between the two tool calls.
+For 5 matching queries, the item passed to suggest_outfit must be the same listing selected by search_listings in all 5 runs, with the item's `id`, `title`, and `price` matching exactly between the two tool calls.
 
 **Why this target:**
-Passing the search result through session state is a required part of the agent design. Testing five runs makes it difficult for a state bug to pass by chance, while comparing identifiable fields such as the listing name, price, and size makes the state transfer directly observable.
+Passing the search result through session state is a required part of the agent design. Testing five runs makes it difficult for a state bug to pass by chance, while comparing `id` (the unique identifier, ruling out coincidental collisions) alongside `title` and `price` makes the state transfer directly observable.
 
 
 ---
@@ -68,11 +68,11 @@ Passing the search result through session state is a required part of the agent 
      mentions the price? Two different items producing the same opening
      sentence? A card longer than a caption anyone would post? Any of those can
      be turned into a number. -->
-For 5 successful runs, every fit card must include at least two of: the listing's name, price, or size, and at least one named outfit piece from suggest_outfit's result, while staying at 50 words or fewer.
+For 5 successful runs, every fit card must include at least two of: a word from the listing's `title`, the `price` as a number (e.g. "$38" or "38"), or the `size`. It must also contain, verbatim, at least one wardrobe item's exact `name` string that also appears in that run's suggest_outfit output — proving the outfit, not just the listing, carried through. All of this while staying at 50 words or fewer.
 
 
 **Why this target:**
-A fit card should be based on the actual results of the agent rather than being a generic caption. Requiring details from both the listing and the generated outfit verifies that information is carried through the full tool chain, while the 50-word limit keeps the result short enough to be a realistic post caption.
+A fit card should be based on the actual results of the agent rather than being a generic caption. Requiring details from both the listing and the generated outfit verifies that information is carried through the full tool chain, while the 50-word limit keeps the result short enough to be a realistic post caption. Checking for a wardrobe item's exact `name` string — rather than a vaguer "outfit piece" — gives both suggest_outfit and this criterion something concrete to agree on.
 
 
 ---
@@ -92,6 +92,29 @@ Size and price are both explicit inputs to search_listings, so returning an item
 
 
 ---
+
+<!-- How do test the above criterias
+REMOVE THIS WHEN DONE
+
+1. Matching query completes all three tools
+Pick a query I know matches at least one listing. Run run_agent(query, wardrobe) 5 times. For each run, check session["error"] is None and session["fit_card"] is non-empty. Count the passes out of 5. Target: at least 4/5.
+
+2. Impossible query stops before the second tool
+Pick a query I know matches zero listings. Run it 5 times. For each run, check session["outfit_suggestion"] is None and session["error"] is a non-empty string. Count passes out of 5. Target: 5/5.
+
+3. Item passed through session state correctly
+Pick 5 matching queries. For each run, record session["selected_item"]["id"], ["title"], ["price"] right after search_listings returns, then record the same three fields on the dict actually passed into suggest_outfit (e.g. by inspecting the call or logging inside it). Compare the two sets of values for each run. Count runs where all three match exactly. Target: 5/5.
+
+4. Fit card reflects both the selected item and the outfit
+For 5 successful runs: for each, take session["fit_card"] and check (a) word count ≤ 50, (b) at least two of: a word from selected_item["title"] appears in the card, the number from selected_item["price"] appears in the card, selected_item["size"] appears in the card, and (c) scan session["outfit_suggestion"] for any wardrobe item's name string, then check that same string also appears verbatim in the fit card. A run passes only if all three checks pass. Count passes out of 5. Target: 5/5.
+
+5. Search respects size and price constraints
+Pick 5 matching queries that each specify a size and a max price. For each run, take the item in session["selected_item"] (the one passed to suggest_outfit) and check its size matches the requested size and its price is ≤ the requested max. Count runs where both hold. Target: 5/5.
+
+
+>
+
+
 
 <!-- ─────────────────────────────────────────────────────────────────────────
      UNIT 4 — read this before you change anything above.
