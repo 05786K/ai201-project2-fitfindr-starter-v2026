@@ -43,16 +43,6 @@ FitFindr lets a user ask for a secondhand clothing item using a description, siz
 
 ## Tool Inventory
 
-<!-- Four lines per tool. This is worth 2 points and it's the single most
-     common place students lose them.
-
-     "Returns a list" earns NOTHING. The description has to say what is IN
-     the list.
-
-     The empty case isn't optional either — it's the thing your loop branches
-     on, and if you don't decide it here you'll discover it as a crash in
-     Milestone 5. -->
-
 ### `search_listings`
 
 - **What it does:** Filters the listings data by size and max price, scores what's left by keyword overlap with the description, and returns the best match first.
@@ -116,8 +106,21 @@ FitFindr lets a user ask for a secondhand clothing item using a description, siz
 **One full query**
 
 ```
-$ python app.py ask '...'
+$ python app.py ask 'silk slip dress in midi length under $40'
 
+  Found:    90s Silk Slip Dress — Floral, Midi Length — $30.0 on depop
+
+  Outfit:   Here are two ways to style your 90s silk slip dress using your existing wardrobe:
+
+**Outfit 1: Casual Grunge (Daytime)**
+Layer the slip dress over the "White ribbed tank top" to lean into that authentic 90s layering trend. Slip on the "Black combat boots" to give the floral print some edge, and throw the "Oversized grey crewneck sweatshirt" right over the dress for a relaxed, slouchy texture contrast. Finish with the "Black crossbody bag". 
+
+**Outfit 2: Streetwear Contrast (Transition Weather)**
+Wear the slip dress on its own and tougunt it up by layering the "Black cropped zip hoodie" over top, letting the midi hem peek out the bottom. Ground the delicate silk with the "Chunky white sneakers" for an effortless high-low mix, and top it all off with the "Vintage black denim jacket".
+
+  Fit card: Channel ultimate 90s grunge in this ivory floral midi. Layer it with "Black combat boots" and a "White ribbed tank top" for effortless daytime cool. Grab it on depop for just $30.00 before someone else does!
+
+2 model calls this session, 587 prompt + 238 output tokens
 ```
 
 **The three tools, tested one at a time**
@@ -125,12 +128,13 @@ $ python app.py ask '...'
 ```
 $ python -c "from tools import search_listings; print(search_listings('graphic tee', max_price=30))"
 
-```
+
 [{'id': 'lst_002', 'title': 'Y2K Baby Tee — Butterfly Print', 'description': 'Super cute early 2000s baby tee with butterfly graphic. Fitted crop length. Tag says medium but fits like a small.', 'category': 'tops', 'style_tags': ['y2k', 'vintage', 'graphic tee', 'cottagecore'], 'size': 'S/M', 'condition': 'excellent', 'price': 18.0, 'colors': ['white', 'pink', 'purple'], 'brand': None, 'platform': 'depop'}, {'id': 'lst_006', 'title': 'Graphic Tee — 2003 Tour Bootleg Style', 'description': 'Vintage-style bootleg tee with faded graphic. Slightly boxy fit. 100% cotton, soft and worn-in.', 'category': 'tops', 'style_tags': ['graphic tee', 'vintage', 'grunge', 'streetwear', 'band tee'], 'size': 'L', 'condition': 'good', 'price': 24.0, 'colors': ['black'], 'brand': None, 'platform': 'depop'}, {'id': 'lst_017', 'title': 'Mesh Long-Sleeve Top — Black', 'description': 'Sheer black mesh long-sleeve. Great for layering under a graphic tee or over a bralette. Stretchy material, fits true to size.', 'category':'tops', 'style_tags': ['y2k', 'grunge', 'goth', 'layering'], 'size': 'S/M', 'condition': 'excellent', 'price': 15.0, 'colors': ['black'], 'brand': None, 'platform': 'depop'}, {'id': 'lst_033', 'title': 'Vintage Band Tee — Faded Grey', 'description': 'Faded grey band-style tee with distressed graphic. Crew neck. Fits boxy. Well-loved but no holes or major damage.', 'category': 'tops', 'style_tags': ['vintage', 'grunge', 'band tee', 'graphic tee', 'streetwear'], 'size': 'L', 'condition': 'fair', 'price': 19.0, 'colors': ['grey', 'charcoal'], 'brand': None, 'platform': 'depop'}, {'id': 'lst_011', 'title': 'Low-Rise Cargo Pants — Khaki', 'description': 'Y2K era low-rise cargo pants. Lots of pockets. Khaki color, slightly distressed at the hems. Great for layering with a long tee.', 'category': 'bottoms', 'style_tags': ['y2k', 'cargo', '2000s', 'streetwear'], 'size': 'W29', 'condition': 'fair', 'price': 27.0, 'colors': ['khaki', 'tan'], 'brand': None, 'platform': 'poshmark'}, {'id': 'lst_015', 'title': 'Vintage Graphic Hoodie — Faded Black', 'description': 'Faded black pullover hoodie with barely-visible vintage graphic on the chest. Cozy interior. Some pilling but adds to the worn-in look.', 'category': 'tops', 'style_tags': ['vintage', 'grunge', 'graphic', 'streetwear'], 'size': 'L', 'condition': 'fair', 'price': 26.0, 'colors': ['black', 'charcoal'], 'brand': None, 'platform': 'depop'}]
-```
-$ python -c "from tools import suggest_outfit; from utils.data_loader import get_example_wardrobe, load_listings; print(suggest_outfit(load_listings()[0], get_example_wardrobe()))"
 
 ```
+
+```
+$ python -c "from tools import suggest_outfit; from utils.data_loader import get_example_wardrobe, load_listings; print(suggest_outfit(load_listings()[0], get_example_wardrobe()))"
 
 Here are two quick ways to style your new Vintage Levi's 501 Jeans:
 
@@ -145,30 +149,27 @@ $ python -c "from tools import create_fit_card; from utils.data_loader import lo
 
 ```
 Scored these vintage Levi's 501 jeans for casual coffee runs. They have the absolute best lived-in indigo fade. Grab them for $38.00 on depop before I change my mind. Pair with "white sneakers" for that effortless 90s off-duty look.
-```
+
 
 ---
 
 ## How I Used AI
 
-<!-- Two specific moments. What you asked, what came back, what you changed.
-
-     "I used Claude to help me code" is not enough.
-
-     "I gave Claude my search_listings spec. It returned None on no match
-     instead of an empty list, so I changed it" is the level we want. -->
-
 **Moment 1**
-
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* 
+     Implement `create_fit_card` according to the README and docstring requirements.
+- *What came back:* 
+     The first version worked, but one sample caption was 52 words, exceeding criterion 4's 50-word limit.
+- *What I changed:* 
+      Added an explicit 50-word limit to the model's system prompt and instructed it to check the word count before responding. Subsequent runs produced captions between 26 and 35 words.
 
 **Moment 2**
-
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* 
+     Why `python app.py ask 's'` returned a listing instead of no results.
+- *What came back:* 
+     Claude found that `_tokenize()` split `"Levi's"` into `"levi"` and `"s"`, causing the one-letter query to match the stray `"s"` token.
+- *What I changed:* 
+     Updated tokenization to remove apostrophes before splitting, so `"Levi's"` becomes `"levis"` instead of two separate tokens.
 
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
