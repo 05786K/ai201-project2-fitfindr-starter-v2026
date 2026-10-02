@@ -92,30 +92,6 @@ Size and price are both explicit inputs to search_listings, so returning an item
 
 
 ---
-
-<!-- How do test the above criterias
-REMOVE THIS WHEN DONE
-
-1. Matching query completes all three tools
-Pick a query I know matches at least one listing. Run run_agent(query, wardrobe) 5 times. For each run, check session["error"] is None and session["fit_card"] is non-empty. Count the passes out of 5. Target: at least 4/5.
-
-2. Impossible query stops before the second tool
-Pick a query I know matches zero listings. Run it 5 times. For each run, check session["outfit_suggestion"] is None and session["error"] is a non-empty string. Count passes out of 5. Target: 5/5.
-
-3. Item passed through session state correctly
-Pick 5 matching queries. For each run, record session["selected_item"]["id"], ["title"], ["price"] right after search_listings returns, then record the same three fields on the dict actually passed into suggest_outfit (e.g. by inspecting the call or logging inside it). Compare the two sets of values for each run. Count runs where all three match exactly. Target: 5/5.
-
-4. Fit card reflects both the selected item and the outfit
-For 5 successful runs: for each, take session["fit_card"] and check (a) word count ≤ 50, (b) at least two of: a word from selected_item["title"] appears in the card, the number from selected_item["price"] appears in the card, selected_item["size"] appears in the card, and (c) scan session["outfit_suggestion"] for any wardrobe item's name string, then check that same string also appears verbatim in the fit card. A run passes only if all three checks pass. Count passes out of 5. Target: 5/5.
-
-5. Search respects size and price constraints
-Pick 5 matching queries that each specify a size and a max price. For each run, take the item in session["selected_item"] (the one passed to suggest_outfit) and check its size matches the requested size and its price is ≤ the requested max. Count runs where both hold. Target: 5/5.
-
-
->
-
-
-
 <!-- ─────────────────────────────────────────────────────────────────────────
      UNIT 4 — read this before you change anything above.
 

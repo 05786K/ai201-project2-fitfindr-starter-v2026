@@ -171,6 +171,39 @@ Scored these vintage Levi's 501 jeans for casual coffee runs. They have the abso
 - *What I changed:* 
      Updated tokenization to remove apostrophes before splitting, so `"Levi's"` becomes `"levis"` instead of two separate tokens.
 
+---
+
+## Stretch Features
+
+### A fourth tool: `compare_price`
+
+- **What it does:** Compares the selected listing's price against the average price of other listings in the same `category`, to flag whether it's priced above or below similar items.
+- **Inputs:** `item` (dict) — the selected listing dict, as returned by `search_listings`.
+- **Returns:** A string naming the item's price, the category average, the dollar difference, and the number of comparable listings it was computed from (e.g. `"At $38.00, this is $5.20 below the average price for bottoms ($43.20, based on 6 other listings)."`).
+- **When it has nothing:** When no other listing shares the item's `category`, returns a fixed message instead of raising or dividing by zero (e.g. `"Not enough comparable 'bottoms' listings to compare price against."`).
+- **Where it's called:** `agent.py::run_agent`, right after `session["selected_item"]` is set. Result is stored in `session["price_comparison"]`.
+
+**Sample run:**
+
+```
+$ python -c "from tools import compare_price; from utils.data_loader import load_listings; print(compare_price(load_listings()[0]))"
+
+At $38.00, this is $9.56 above the average price for bottoms ($28.44, based on 9 other listings).
+```
+
+```
+$ python app.py ask 'vintage graphic tee under $30'
+
+  Found:    Y2K Baby Tee — Butterfly Print — $18.0 on depop
+
+  Price:    At $18.00, this is $4.00 below the average price for tops ($22.00, based on 14 other listings).
+
+  Outfit:   **Outfit 1: Casual Y2K Streetwear**
+...
+
+  Fit card: Channeling total 2000s mall vibes with this butterfly Y2K Baby Tee. Grab it on depop for $18.00 before I change my mind. Throw it on with your favorite "Baggy straight-leg jeans, dark wash" and "Chunky white sneakers" for the ultimate off-duty look.
+```
+
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
      Don't fill these in during unit 3.

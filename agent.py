@@ -17,7 +17,7 @@ import re
 
 import config
 import trace
-from tools import search_listings, suggest_outfit, create_fit_card
+from tools import search_listings, suggest_outfit, create_fit_card, compare_price
 from generate import ModelUnavailable
 
 _SIZE_RE = re.compile(r"\bsize[:\s]+([A-Za-z0-9/]+)", re.IGNORECASE)
@@ -71,6 +71,7 @@ def new_session(query: str, wardrobe: dict) -> dict:
         "parsed": {},                # description / size / max_price you pulled out of it
         "search_results": [],        # everything search_listings returned
         "selected_item": None,       # the one you chose — goes into suggest_outfit
+        "price_comparison": None,    # what compare_price returned for selected_item
         "wardrobe": wardrobe,        # the user's wardrobe
         "outfit_suggestion": None,   # what suggest_outfit returned
         "fit_card": None,            # what create_fit_card returned
@@ -129,6 +130,14 @@ def run_agent(query: str, wardrobe: dict) -> dict:
 
     ─────────────────────────────────────────────────────────────────────────
    
+    IN UNIT 4 you come back and add two things:
+
+        • Trace calls. One per step. `trace.step("search_listings", inputs=...,
+            returned=...)` — see trace.py. Your README needs the output.
+
+        • A handler for ModelUnavailable, so a bad key produces a message rather
+            than a stack trace. The import is already at the top of this file.
+
     """
     session = new_session(query, wardrobe)
 
@@ -151,6 +160,8 @@ def run_agent(query: str, wardrobe: dict) -> dict:
 
     session["selected_item"] = session["search_results"][0]
 
+    session["price_comparison"] = compare_price(session["selected_item"])
+
     session["outfit_suggestion"] = suggest_outfit(
         session["selected_item"], session["wardrobe"]
     )
@@ -172,6 +183,7 @@ def _show(session: dict) -> None:
 
     item = session["selected_item"] or {}
     print(f"  found:    {item.get('title')} — ${item.get('price')} on {item.get('platform')}")
+    print(f"  price:    {session['price_comparison']}")
     print(f"  outfit:   {session['outfit_suggestion']}")
     print(f"  fit card: {session['fit_card']}")
 

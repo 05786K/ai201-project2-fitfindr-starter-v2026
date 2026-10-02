@@ -252,3 +252,46 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
             f"{new_item['platform']} — too good to pass up."
         )
     return response
+
+
+# ── Tool 4: compare_price ─────────────────────────────────────────────────────
+
+def compare_price(item: dict) -> str:
+    """
+    Compare a listing's price against the average price of other listings in
+    the same category.
+
+    Like search_listings, this doesn't call the model — it's pure arithmetic
+    over the listings data.
+
+    Args:
+        item: a listing dict — the selected item, as returned by
+              search_listings().
+
+    Returns:
+        A string naming the item's price, the category average, the dollar
+        difference, and how many comparable listings it was computed from.
+        **Returns a fixed message — not an exception, not a divide-by-zero —
+        when no other listing shares this item's category.**
+    """
+    others = [
+        listing
+        for listing in load_listings()
+        if listing["category"] == item["category"] and listing["id"] != item["id"]
+    ]
+
+    if not others:
+        return (
+            f"Not enough comparable '{item['category']}' listings to compare "
+            f"price against."
+        )
+
+    average = sum(listing["price"] for listing in others) / len(others)
+    diff = item["price"] - average
+    direction = "above" if diff >= 0 else "below"
+
+    return (
+        f"At ${item['price']:.2f}, this is ${abs(diff):.2f} {direction} the "
+        f"average price for {item['category']} (${average:.2f}, based on "
+        f"{len(others)} other listings)."
+    )

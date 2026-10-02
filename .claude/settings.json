@@ -6,7 +6,9 @@
       "Bash(AI201_CACHE=0 python -c ' *)",
       "Bash(AI201_CACHE=0 python -c \"from tools import create_fit_card; from utils.data_loader import load_listings; print\\(create_fit_card\\('jeans and white sneakers', load_listings\\(\\)[0]\\)\\)\")",
       "Bash(AI201_CACHE=0 python agent.py)",
-      "Bash(python test.py)"
+      "Bash(python test.py)",
+      "Bash(python -c \"from tools import compare_price; from utils.data_loader import load_listings; print\\(compare_price\\(load_listings\\(\\)[0]\\)\\)\")",
+      "Bash(AI201_CACHE=0 python app.py ask 'vintage graphic tee under $30')"
     ]
   }
 }
