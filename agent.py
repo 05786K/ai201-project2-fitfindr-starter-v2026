@@ -17,6 +17,9 @@ import re
 
 import config
 import trace
+from mcp_client import call_tool
+import mcp_client
+import mcp_client
 from tools import search_listings, suggest_outfit, create_fit_card, compare_price
 from generate import ModelUnavailable
 
@@ -145,10 +148,19 @@ def run_agent(query: str, wardrobe: dict) -> dict:
 
     session["parsed"] = _parse_query(query)
 
-    session["search_results"] = search_listings(
-        description=session["parsed"]["description"],
-        size=session["parsed"]["size"],
-        max_price=session["parsed"]["max_price"],
+    # session["search_results"] = search_listings(
+    #     description=session["parsed"]["description"],
+    #     size=session["parsed"]["size"],
+    #     max_price=session["parsed"]["max_price"],
+    # )
+
+    session["search_results"] = mcp_client.call_tool(
+    "search_listings",
+    {
+        "description": session["parsed"]["description"],
+        "size": session["parsed"]["size"],
+        "max_price": session["parsed"]["max_price"],
+    },
     )
 
     if not session["search_results"]:
