@@ -171,6 +171,14 @@ Scored these vintage Levi's 501 jeans for casual coffee runs. They have the abso
 - *What I changed:* 
      Updated tokenization to remove apostrophes before splitting, so `"Levi's"` becomes `"levis"` instead of two separate tokens.
 
+**Moment 3**
+- *What I asked for:* 
+     All 5 criteria passed on the first `run_eval.py --label before` run, so I asked Claude to find a real size-matching edge case `scenarios.py` wasn't exercising, since criteria 3 and 5 only ever ran one query repeated five times.
+- *What came back:* 
+     Claude found that `_size_tokens()` split on `(` and `)` as plain separators, so commentary words inside a parenthetical note leaked into the matchable token set — `"XL (fits oversized)"` tokenized to `{'XL', 'FITS', 'OVERSIZED'}`, and `search_listings('sweatshirt', size='fits')` wrongly matched that listing even though "fits" isn't a size.
+- *What I changed:* 
+     Updated `_size_tokens()` to strip parenthetical content out entirely before splitting, so only the real size value outside the parentheses becomes a token. Re-ran the full eval afterward — all 5 criteria stayed at 5/5, since the bug was never in a scenario's path, but the manual reproduction confirmed the fix.
+
 ---
 
 ## Stretch Features
@@ -384,7 +392,10 @@ The item passed to `suggest_outfit` is size `L` at $24.00 — matching the reque
 
 **Diagnoses**
 
-All five criteria were MET on the evaluation runs, so there were no individual misses to diagnose. The strongest pattern is that the core loop behaved consistently across the tests: the search branch stopped correctly when there were no results, state passed correctly between tools, and the generated fit cards met the required content and length constraints.
+All five criteria were MET, so there are no misses to diagnose — but two targets are worth naming as looser than they need to be:
+
+- **Criterion 1's target (≥4 of 5) is looser than the agent's actual behavior.** The happy path hit 5/5 in both the before and after runs — 10/10 total tries, zero failures. A tighter target of 5 of 5 would match what the agent actually does; the 4/5 allowance for model variance (per `criteria.md`'s own reasoning) would only matter if a future run actually produced a miss.
+- **Criteria 3 and 5 are under-tested, not under-performing.** Both rely on one deterministic query repeated five times — `search_listings` has no model call, so the 5/5 only proves the code works for one size/price combination, not that `tools.py::_size_tokens` handles every size format in the data. That gap is exactly what the Improvement below went looking for, and found: a real bug in how parenthetical size annotations were tokenized.
 
 
 ---
@@ -478,7 +489,6 @@ The run now stops at `suggest_outfit`, names exactly what broke (a rejected API 
      anyone will ever find that out. -->
 
 **Happy path**
-**Full Run**
 ```
 $ python app.py ask 'silk slip dress in midi length under $40' --trace
 
@@ -527,11 +537,9 @@ $ python app.py ask 'designer ballgown size XXS under $5' --trace
 0 model calls this session
 ```
 
-**On the MCP move:** <!-- what changed in your code, and whether anything
-behaved differently afterwards. If the rewire didn't work, say exactly where it
-broke — the error text and the last thing that worked. That earns the point in
-full. -->
+**On the MCP move:** `mcp_server.py` registers `search_listings` with `@mcp.tool()`, using an aliased import of the existing `tools.py` implementation so the registered tool does not call itself. In `agent.py::run_agent`, the direct `search_listings(...)` call was replaced with `mcp_client.call_tool("search_listings", {...})`.
 
+The return value stayed the same: a list of listing dictionaries with the same fields and ordering. Functionally, nothing else changed. The main difference is that `search_listings` now runs through the MCP server over stdio instead of being called directly in the same process. The trace also labels the step `search_listings (via MCP)` so the MCP call is visible.
 
 
 
@@ -599,8 +607,6 @@ No criterion is currently missed, but two gaps remain:
 
 - **No scenario covers the size-annotation fix.** The `_size_tokens` bug (criterion 5's section above) was found by manual testing, not by `scenarios.py`. A regression there would pass the eval silently. I'd add a scenario using a size like `"XL (fits oversized)"` to close this.
 - **Criteria 3 and 5 only ever run one query, repeated 5 times.** Both paths are deterministic (no model call), so the 5 tries are really one test shown five times — they can't catch an edge case a different size/item combo would expose. I'd vary the query across the 5 tries instead of repeating it.
-
-I stopped here because both are test-coverage gaps, not product bugs — the agent itself behaves correctly on everything currently measured.
 
 
 <!-- ═════════════════════════════════════════════════════════════════════
