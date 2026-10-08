@@ -376,14 +376,15 @@ The item passed to `suggest_outfit` is size `L` at $24.00 — matching the reque
 
 | # | Criterion | Target | Verdict | How I decided |
 |---|---|---|---|---|
-| 1 |  |  |  |  |
-| 2 |  |  |  |  |
-| 3 |  |  |  |  |
-| 4 |  |  |  |  |
-| 5 |  |  |  |  |
+| 1 | matching query completes all three tools | ≥4 of 5 | MET | 5/5 tries returned a fit card with no early stop. |
+| 2 | impossible query stops before the second tool | 5 of 5 | MET | 5/5 tries stopped at `search_listings` with a message, trace never reached `suggest_outfit`. |
+| 3 | item passed through session state correctly | 5 of 5 | MET | 5/5 tries show the same id/title/price in the trace from `search_listings` through `suggest_outfit` and `create_fit_card`. |
+| 4 | fit card reflects item and outfit | 5 of 5 | MET | 5/5 fit cards hit ≥2 of {title word, price, size}, quoted a wardrobe item verbatim from the outfit, and stayed under 50 words. |
+| 5 | search respects size and price | 5 of 5 | MET | 5/5 tries returned only size-L, ≤$30 listings for a query specifying both. |
 
 **Diagnoses**
 
+No misses this round — all 5 criteria hit target on the first eval run, so there's nothing to diagnose yet. The agent's core loop (branch, state passing, prompts) was built and debugged in unit 3 before these criteria were written, which is most of why this held up. One caveat: criteria 3 and 5 are deterministic (`search_listings` has no model call), so their 5/5 reflects one query run five times, not five independently risky paths — a different query could still expose a size/token-matching edge case `tools.py` doesn't handle. That's the one spot I'd target first if asked to stress-test further, not because it's broken, but because it's the least-tested path here.
 
 
 ---
