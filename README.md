@@ -271,6 +271,82 @@ that produced it:
 
 ---
 
+## Failure Modes
+
+<!-- Unit 4, Milestone 2. Each failure triggered on purpose, with the real
+     output pasted below, and a note on whether a handler was needed. -->
+
+### 1. Empty search
+
+**Command:** `python app.py ask 'designer ballgown size XXS under $5'`
+
+**What the agent said:**
+
+```
+  No listings matched — try a broader description, a different size, or a higher max price.
+
+0 model calls this session
+```
+
+**Handler needed?** No. `agent.py::run_agent` already set `session["error"]` to a message naming what to change (description, size, or price) and returned before calling `suggest_outfit`. 
+
+### 2. Empty wardrobe
+
+**Command:** `python app.py ask 'vintage graphic tee under $30' --empty-wardrobe`
+
+**What the agent said:**
+
+```
+(running with an empty wardrobe)
+
+  Found:    Y2K Baby Tee — Butterfly Print — $18.0 on depop
+
+  Price:    At $18.00, this is $4.00 below the average price for tops ($22.00, based on 14 other listings).
+
+  Outfit:   Lean into the nostalgic vibe by pairing this baby tee with low-rise baggy cargo pants in a soft pastel pink or vintage-wash denim to balance the fitted top. Layer a thin silver chain necklace and add chunky white platform sneakers or pastel jelly sandals to complete the effortless Y2K aesthetic.
+
+  Fit card: Total 2000s mall-rat energy right here. Grab this butterfly print Y2K Baby Tee for $18.00 on depop. Pair it with "low-rise baggy cargo pants" for peak nostalgia.
+
+2 model calls this session, 274 prompt + 107 output tokens
+```
+
+**Handler needed?** No. `tools.py::suggest_outfit` already checks `wardrobe["items"]` and, when it's empty, asks the model for general styling advice instead of raising or returning `""`. Returned real advice, not a crash and not an empty string.
+
+### 3. Model unavailable
+
+**Command:** changed the last character of `GEMINI_API_KEY` in `.env`, then ran a query not asked before: `python app.py ask '90s track jacket in size M' --trace`
+
+**What the agent said — before adding a handler** (query: `platform sneakers size 8`):
+
+```
+ModelUnavailable: The model rejected your API key. Check GEMINI_API_KEY in your .env file, or create a fresh key at aistudio.google.com.
+
+1 model calls this session
+```
+**Handler added:** wrapped the `suggest_outfit()` and `create_fit_card()` calls in `agent.py::run_agent` in `try/except ModelUnavailable`, setting `session["error"]` and returning — the same pattern already used for the empty-search branch.
+
+**What the agent said — after the fix:**
+
+```
+[1] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: 10 items: 90s Track Jacket — Navy/White Stripe, 90s Silk Slip Dress — Floral, Midi Length, 90s Leather Bomber — Black … +7 more
+[2] compare_price
+      in:  90s Track Jacket — Navy/White Stripe ($45.0, poshmark)
+      out: At $45.00, this is $1.14 above the average price for outerwear ($43.86, based on 7 other listings).
+[3] suggest_outfit
+      in:  dict with keys: selected_item, wardrobe
+      →    ModelUnavailable, stopping: The model rejected your API key. Check GEMINI_API_KEY in your .env file, or create a fresh key at aistudio.google.com.
+
+  The model rejected your API key. Check GEMINI_API_KEY in your .env file, or create a fresh key at aistudio.google.com.
+
+1 model calls this session
+```
+
+The run now stops at `suggest_outfit`, names exactly what broke (a rejected API key) and what to do about it (check `.env` or make a fresh key), and exits cleanly. The key was restored to its real value immediately after this test.
+
+---
+
 ## Loop Trace
 
 <!-- One full run, printed step by step, with the MCP call visible in it.
@@ -284,15 +360,53 @@ that produced it:
      anyone will ever find that out. -->
 
 **Happy path**
-
+**Full Run**
 ```
+$ python app.py ask 'silk slip dress in midi length under $40' --trace
 
+[1] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: 10 items: 90s Silk Slip Dress — Floral, Midi Length, Silk Button-Down — Sage Green, Vintage Levi's 501 Jeans — Medium Wash … +7 more
+[2] compare_price
+      in:  90s Silk Slip Dress — Floral, Midi Length ($30.0, depop)
+      out: At $30.00, this is $0.67 above the average price for bottoms ($29.33, based on 9 other listings).
+[3] suggest_outfit
+      in:  dict with keys: selected_item, wardrobe
+      out: Here are two ways to style your 90s silk slip dress using your existing wardrobe:  **Outfit 1: Casual Grunge
+[4] create_fit_card
+      in:  dict with keys: outfit, new_item
+      out: Channel ultimate 90s grunge in this ivory floral midi. Layer it with "Black combat boots" and a "White ribbed …
+
+  Found:    90s Silk Slip Dress — Floral, Midi Length — $30.0 on depop
+
+  Price:    At $30.00, this is $0.67 above the average price for bottoms ($29.33, based on 9 other listings).
+
+  Outfit:   Here are two ways to style your 90s silk slip dress using your existing wardrobe:
+
+**Outfit 1: Casual Grunge (Daytime)**
+Layer the slip dress over the "White ribbed tank top" to lean into that authentic 90s layering trend. Slip on the "Black combat boots" to give the floral print some edge, and throw the "Oversized grey crewneck sweatshirt" right over the dress for a relaxed, slouchy texture contrast. Finish with the "Black crossbody bag". 
+
+**Outfit 2: Streetwear Contrast (Transition Weather)**
+Wear the slip dress on its own and tougunt it up by layering the "Black cropped zip hoodie" over top, letting the midi hem peek out the bottom. Ground the delicate silk with the "Chunky white sneakers" for an effortless high-low mix, and top it all off with the "Vintage black denim jacket".
+
+  Fit card: Channel ultimate 90s grunge in this ivory floral midi. Layer it with "Black combat boots" and a "White ribbed tank top" for effortless daytime cool. Grab it on depop for just $30.00 before someone else does!
+
+0 model calls this session, 2 served from cache
 ```
 
 **Empty search**
 
 ```
+$ python app.py ask 'designer ballgown size XXS under $5' --trace
 
+[1] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: [] (empty)
+      →    branch: empty search results, stopping
+
+  No listings matched — try a broader description, a different size, or a higher max price.
+
+0 model calls this session
 ```
 
 **On the MCP move:** <!-- what changed in your code, and whether anything

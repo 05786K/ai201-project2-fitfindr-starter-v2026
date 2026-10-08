@@ -8,7 +8,17 @@
       "Bash(AI201_CACHE=0 python agent.py)",
       "Bash(python test.py)",
       "Bash(python -c \"from tools import compare_price; from utils.data_loader import load_listings; print\\(compare_price\\(load_listings\\(\\)[0]\\)\\)\")",
-      "Bash(AI201_CACHE=0 python app.py ask 'vintage graphic tee under $30')"
+      "Bash(AI201_CACHE=0 python app.py ask 'vintage graphic tee under $30')",
+      "Bash(python app.py ask 'designer ballgown size XXS under $5')",
+      "Bash(where python *)",
+      "Bash(./.venv/Scripts/python.exe app.py ask 'designer ballgown size XXS under $5')",
+      "Bash(./.venv/Scripts/python.exe app.py ask 'vintage graphic tee under $30' --empty-wardrobe)",
+      "Bash(./.venv/Scripts/python.exe app.py ask 'platform sneakers size 8')",
+      "Bash(./.venv/Scripts/python.exe agent.py)",
+      "Bash(./.venv/Scripts/python.exe app.py ask 'silk slip dress in midi length under $40' --trace)",
+      "Bash(./.venv/Scripts/python.exe app.py ask 'designer ballgown size XXS under $5' --trace)",
+      "Bash(./.venv/Scripts/python.exe app.py ask '90s track jacket in size M' --trace)",
+      "Bash(./.venv/Scripts/python.exe app.py ask 'vintage graphic tee under $30')"
     ]
   }
 }

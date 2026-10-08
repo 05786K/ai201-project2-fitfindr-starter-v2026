@@ -17,10 +17,8 @@ import re
 
 import config
 import trace
-from mcp_client import call_tool
 import mcp_client
-import mcp_client
-from tools import search_listings, suggest_outfit, create_fit_card, compare_price
+from tools import suggest_outfit, create_fit_card, compare_price
 from generate import ModelUnavailable
 
 _SIZE_RE = re.compile(r"\bsize[:\s]+([A-Za-z0-9/]+)", re.IGNORECASE)
@@ -148,38 +146,77 @@ def run_agent(query: str, wardrobe: dict) -> dict:
 
     session["parsed"] = _parse_query(query)
 
-    # session["search_results"] = search_listings(
-    #     description=session["parsed"]["description"],
-    #     size=session["parsed"]["size"],
-    #     max_price=session["parsed"]["max_price"],
-    # )
-
-    session["search_results"] = mcp_client.call_tool(
-    "search_listings",
-    {
+    search_inputs = {
         "description": session["parsed"]["description"],
         "size": session["parsed"]["size"],
         "max_price": session["parsed"]["max_price"],
-    },
-    )
+    }
+    session["search_results"] = mcp_client.call_tool("search_listings", search_inputs)
 
     if not session["search_results"]:
         session["error"] = (
             "No listings matched — try a broader description, a different "
             "size, or a higher max price."
         )
+        trace.step(
+            "search_listings (via MCP)",
+            inputs=search_inputs,
+            returned=session["search_results"],
+            note="branch: empty search results, stopping",
+        )
         return session
+
+    trace.step(
+        "search_listings (via MCP)",
+        inputs=search_inputs,
+        returned=session["search_results"],
+    )
 
     session["selected_item"] = session["search_results"][0]
 
     session["price_comparison"] = compare_price(session["selected_item"])
-
-    session["outfit_suggestion"] = suggest_outfit(
-        session["selected_item"], session["wardrobe"]
+    trace.step(
+        "compare_price",
+        inputs=session["selected_item"],
+        returned=session["price_comparison"],
     )
 
-    session["fit_card"] = create_fit_card(
-        session["outfit_suggestion"], session["selected_item"]
+    try:
+        session["outfit_suggestion"] = suggest_outfit(
+            session["selected_item"], session["wardrobe"]
+        )
+    except ModelUnavailable as exc:
+        session["error"] = str(exc)
+        trace.step(
+            "suggest_outfit",
+            inputs={"selected_item": session["selected_item"], "wardrobe": session["wardrobe"]},
+            note=f"ModelUnavailable, stopping: {exc}",
+        )
+        return session
+
+    trace.step(
+        "suggest_outfit",
+        inputs={"selected_item": session["selected_item"], "wardrobe": session["wardrobe"]},
+        returned=session["outfit_suggestion"],
+    )
+
+    try:
+        session["fit_card"] = create_fit_card(
+            session["outfit_suggestion"], session["selected_item"]
+        )
+    except ModelUnavailable as exc:
+        session["error"] = str(exc)
+        trace.step(
+            "create_fit_card",
+            inputs={"outfit": session["outfit_suggestion"], "new_item": session["selected_item"]},
+            note=f"ModelUnavailable, stopping: {exc}",
+        )
+        return session
+
+    trace.step(
+        "create_fit_card",
+        inputs={"outfit": session["outfit_suggestion"], "new_item": session["selected_item"]},
+        returned=session["fit_card"],
     )
 
     return session
