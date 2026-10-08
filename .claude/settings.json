@@ -18,7 +18,9 @@
       "Bash(./.venv/Scripts/python.exe app.py ask 'silk slip dress in midi length under $40' --trace)",
       "Bash(./.venv/Scripts/python.exe app.py ask 'designer ballgown size XXS under $5' --trace)",
       "Bash(./.venv/Scripts/python.exe app.py ask '90s track jacket in size M' --trace)",
-      "Bash(./.venv/Scripts/python.exe app.py ask 'vintage graphic tee under $30')"
+      "Bash(./.venv/Scripts/python.exe app.py ask 'vintage graphic tee under $30')",
+      "Bash(./.venv/Scripts/python.exe -c \"from tools import search_listings; print\\(search_listings\\('vintage graphic tee', size='L', max_price=30\\)\\)\")",
+      "Bash(./.venv/Scripts/python.exe run_eval.py --label before)"
     ]
   }
 }

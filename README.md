@@ -224,18 +224,135 @@ $ python app.py ask 'vintage graphic tee under $30'
 
 | Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
 |---|---|---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |  |  |
+| 1. matching query completes all three tools | ≥4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 2. impossible query stops before the second tool | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 3. item passed through session state correctly | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 4. fit card reflects both the selected item and the outfit | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 5. search respects size and price constraints | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
 
-**Real output from one try**, pasted as text, naming the file and function
-that produced it:
+Full output for all 25 tries (5 criteria × 5 tries) is in [`results/run_2026-10-07_2012_before.md`](results/run_2026-10-07_2012_before.md).
+
+**Real output from one try per criterion**, pasted as text. Each session was produced by `agent.py::run_agent`, called from `run_eval.py::run_once` (`python run_eval.py --label before`, caching off). Full output for all 25 tries is in [`results/run_2026-10-07_2012_before.md`](results/run_2026-10-07_2012_before.md).
+
+**Criterion 1 — matching query completes all three tools** (query: `vintage graphic tee under $30`, try 1)
 
 ```
+selected_item: Y2K Baby Tee — Butterfly Print ($18.0, depop)
+search_results: 10
+
+Outfit suggestion:
+Here are two quick Y2K-inspired looks for your new baby tee:
+
+**Look 1: Casual Streetwear**
+Pair the Y2K Baby Tee — Butterfly Print with your "Baggy straight-leg jeans, dark wash" and layer the "Black cropped zip hoodie" over top, leaving it unzipped to show off the print. Finish the outfit with "Chunky white sneakers" and your "Black crossbody bag" for an easy, everyday vibe.
+
+**Look 2: Edgy Contrast**
+Tuck the Y2K Baby Tee — Butterfly Print into your "Wide-leg khaki trousers", cinched at the waist with the "Brown leather belt". Throw on the "Vintage black denim jacket" and ground the outfit with "Black combat boots" for a cool mix of girly Y2K and tough utility.
+
+Fit card:
+Channeling 2003 with this butterfly Y2K Baby Tee — Butterfly Print. Grab it on depop for $18.00 before it's gone. Pair with "Wide-leg khaki trousers" and "Black combat boots" for an edgy contrast.
+
+Trace:
+[1] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: 10 items: Y2K Baby Tee — Butterfly Print, Graphic Tee — 2003 Tour Bootleg Style, Vintage Band Tee — Faded Grey … +7 more
+[2] compare_price
+      in:  Y2K Baby Tee — Butterfly Print ($18.0, depop)
+      out: At $18.00, this is $4.00 below the average price for tops ($22.00, based on 14 other listings).
+[3] suggest_outfit
+      in:  dict with keys: selected_item, wardrobe
+      out: Here are two quick Y2K-inspired looks for your new baby tee:  **Look 1: Casual Streetwear** Pair the Y2K Baby …
+[4] create_fit_card
+      in:  dict with keys: outfit, new_item
+      out: Channeling 2003 with this butterfly Y2K Baby Tee — Butterfly Print. Grab it on depop for $18.00 before it's go…
+```
+
+**Criterion 2 — impossible query stops before the second tool** (query: `designer ballgown size XXS under $5`, try 1)
 
 ```
+stopped early: yes — No listings matched — try a broader description, a different size, or a higher max price.
+selected_item: (none)
+search_results: 0
+
+Trace:
+[1] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: [] (empty)
+      →    branch: empty search results, stopping
+```
+
+**Criterion 3 — item passed through session state correctly** (query: `90s track jacket in size M`, try 1)
+
+```
+selected_item: 90s Track Jacket — Navy/White Stripe ($45.0, poshmark)
+search_results: 10
+
+Outfit suggestion:
+Here are two ways to style your new 90s Track Jacket — Navy/White Stripe:
+
+**Outfit 1: Casual & Sporty**
+Layer the "White ribbed tank top" underneath the track jacket, and pair them with the "Baggy straight-leg jeans, dark wash" and "Chunky white sneakers". Finish the look with the "Black crossbody bag".
+
+**Outfit 2: High-Low Contrast**
+Wear the track jacket tucked into the "Wide-leg khaki trousers", cinched at the waist with the "Brown leather belt". Complete the outfit with the "Chunky white sneakers" and the "Black crossbody bag".
+
+Fit card:
+Scored this 90s Track Jacket — Navy/White Stripe for $45.00 on poshmark. It has major retro skater energy. Pair it with a "White ribbed tank top" and "Baggy straight-leg jeans, dark wash" for weekend coffee runs.
+
+Trace:
+[1] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: 10 items: 90s Track Jacket — Navy/White Stripe, 90s Silk Slip Dress — Floral, Midi Length, 90s Leather Bomber — Black … +7 more
+[2] compare_price
+      in:  90s Track Jacket — Navy/White Stripe ($45.0, poshmark)
+      out: At $45.00, this is $1.14 above the average price for outerwear ($43.86, based on 7 other listings).
+[3] suggest_outfit
+      in:  dict with keys: selected_item, wardrobe
+      out: Here are two ways to style your new 90s Track Jacket — Navy/White Stripe:  **Outfit 1: Casual & Sporty** Layer…
+[4] create_fit_card
+      in:  dict with keys: outfit, new_item
+      out: Scored this 90s Track Jacket — Navy/White Stripe for $45.00 on poshmark. It has major retro skater energy. Pai…
+```
+
+The item named in `compare_price`'s input (step 2), `suggest_outfit`'s outfit text, and `create_fit_card`'s fit card text is "90s Track Jacket — Navy/White Stripe" at $45.00 throughout — the same id/title/price `search_listings` selected in step 1, with nothing swapped in between.
+
+**Criterion 4 — fit card reflects both the selected item and the outfit** (query: `silk slip dress in midi length under $40`, try 1)
+
+```
+selected_item: 90s Silk Slip Dress — Floral, Midi Length ($30.0, depop)
+search_results: 10
+
+Outfit suggestion:
+Here are two quick ways to style your new 90s Silk Slip Dress:
+
+**Outfit 1: Casual & Grunge-Leaning**
+Layer the "Oversized grey crewneck sweatshirt" right over the slip dress to transform it into a skirt look, and throw on the "Black cropped zip hoodie" for extra warmth. Ground the softness of the floral silk with the "Black combat boots" and finish it off with the "Black crossbody bag".
+
+**Outfit 2: 90s Layered Streetwear**
+Wear the "White ribbed tank top" underneath the slip dress for a classic 90s layered neckline, then add the "Vintage black denim jacket" on top. Keep the footwear easy and sporty with the "Chunky white sneakers" and accessorize with the "Black crossbody bag".
+
+Fit card:
+Channel your inner 90s icon in this floral midi slip. Layer it under a "Vintage black denim jacket" and "Chunky white sneakers" for pure streetwear nostalgia. Grab it on depop for $30.00 today!
+```
+
+The fit card names two words from the title ("floral", "midi"), the price ("$30.00"), and two wardrobe item names verbatim from the outfit suggestion ("Vintage black denim jacket", "Chunky white sneakers") — all in 33 words, under the 50-word cap.
+
+**Criterion 5 — search respects size and price constraints** (query: `vintage graphic tee size L under $30`, try 1)
+
+```
+selected_item: Graphic Tee — 2003 Tour Bootleg Style ($24.0, depop)
+search_results: 3
+
+Trace:
+[1] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: 3 items: Graphic Tee — 2003 Tour Bootleg Style, Vintage Band Tee — Faded Grey, Vintage Graphic Hoodie — Faded Black
+[2] compare_price
+      in:  Graphic Tee — 2003 Tour Bootleg Style ($24.0, depop)
+      out: At $24.00, this is $2.43 above the average price for tops ($21.57, based on 14 other listings).
+```
+
+The item passed to `suggest_outfit` is size `L` at $24.00 — matching the requested size exactly and under the requested $30 ceiling. All 3 of the search results returned for this query (not just the selected one) are size L.
 
 ---
 
