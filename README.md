@@ -384,7 +384,7 @@ The item passed to `suggest_outfit` is size `L` at $24.00 — matching the reque
 
 **Diagnoses**
 
-No misses this round — all 5 criteria hit target on the first eval run, so there's nothing to diagnose yet. The agent's core loop (branch, state passing, prompts) was built and debugged in unit 3 before these criteria were written, which is most of why this held up. One caveat: criteria 3 and 5 are deterministic (`search_listings` has no model call), so their 5/5 reflects one query run five times, not five independently risky paths — a different query could still expose a size/token-matching edge case `tools.py` doesn't handle. That's the one spot I'd target first if asked to stress-test further, not because it's broken, but because it's the least-tested path here.
+All five criteria were MET on the evaluation runs, so there were no individual misses to diagnose. The strongest pattern is that the core loop behaved consistently across the tests: the search branch stopped correctly when there were no results, state passed correctly between tools, and the generated fit cards met the required content and length constraints.
 
 
 ---
@@ -534,6 +534,8 @@ full. -->
 
 
 
+
+
 ---
 
 ## The Improvement
@@ -545,33 +547,60 @@ full. -->
 
 **What I changed:**
 
+`tools.py::_size_tokens` now strips parenthetical annotations (`\([^)]*\)`) out of a listing's size string before splitting it into matchable tokens, instead of just removing the parentheses and keeping their contents as tokens.
+
+```python
+def _size_tokens(size: str) -> set[str]:
+    cleaned = _SIZE_PAREN_RE.sub("", size)
+    return {token for token in _SIZE_SPLIT_RE.split(cleaned.upper()) if token}
+```
+
 **Which failure it was meant to fix:**
+
+The diagnosis for criterion 5 flagged that `search_listings`' size matching was the least-tested path in the before run — all 5 criteria passed, but criteria 3 and 5 only exercised one query repeated five times, so a token-matching edge case could still be hiding. I went looking for one and found it: `"XL (fits oversized)"` tokenized to `{'XL', 'FITS', 'OVERSIZED'}` — the old code split on `(` and `)` as plain separators, so commentary words from inside the parentheses became matchable size tokens in their own right. Reproduced directly, before the fix:
+
+```
+$ python -c "from tools import search_listings; print(search_listings('sweatshirt', size='fits'))"
+[{'id': ..., 'title': 'Oversized Crewneck Sweatshirt — Vintage Navy', ..., 'size': 'XL (fits oversized)', ...}]
+```
+
+A listing came back for `size="fits"`, which isn't a size at all — it's the word "fits" leaking out of an editorial note on an XL item. That directly undermines the "listing matches the requested size" guarantee criterion 5 depends on.
+
+After the fix, the same call returns nothing, and legitimate matches (`size="XL"`, `size="S/M"` → `"M"`) are unaffected:
+
+```
+$ python -c "from tools import search_listings; print(search_listings('sweatshirt', size='fits'))"
+[]
+$ python -c "from tools import search_listings; print([l['size'] for l in search_listings('sweatshirt', size='XL')])"
+['XL (fits oversized)']
+```
 
 ### Run Log — After
 
 | Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
 |---|---|---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |  |  |
+| 1. matching query completes all three tools | ≥4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 2. impossible query stops before the second tool | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 3. item passed through session state correctly | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 4. fit card reflects both the selected item and the outfit | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 5. search respects size and price constraints | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+
+Full output in [`results/run_2026-10-07_2119_after.md`](results/run_2026-10-07_2119_after.md).
 
 **Did it help, and how do I know:**
 
-<!-- If it made things worse, say that. Honestly reported, that earns full
-     credit and is more interesting than one that worked. -->
-
-
+It fixed a real bug, but it didn't move the numbers — all 5 criteria are 5/5 in both the before and after runs, identical to the before table. That's expected, not a wash: none of the 5 scenarios in `scenarios.py` use a size string with a parenthetical annotation, so the existing eval was never going to see this bug or its fix. The evidence it helped is the manual reproduction above, run directly against `search_listings`, not against the scenario suite — before the fix, a nonsense size like `"fits"` matched a real listing; after, it doesn't, and every size string already covered by the eval (`"L"`, `"M"`, `"S/M"`) still matches exactly as before.
 
 ---
 
 ## What's Still Broken
 
-<!-- For each criterion still missed: what you'd do, and why you stopped where
-     you did. "I ran out of time" is fine if it's true. Pretending nothing is
-     left is not. -->
+No criterion is currently missed, but two gaps remain:
 
+- **No scenario covers the size-annotation fix.** The `_size_tokens` bug (criterion 5's section above) was found by manual testing, not by `scenarios.py`. A regression there would pass the eval silently. I'd add a scenario using a size like `"XL (fits oversized)"` to close this.
+- **Criteria 3 and 5 only ever run one query, repeated 5 times.** Both paths are deterministic (no model call), so the 5 tries are really one test shown five times — they can't catch an edge case a different size/item combo would expose. I'd vary the query across the 5 tries instead of repeating it.
+
+I stopped here because both are test-coverage gaps, not product bugs — the agent itself behaves correctly on everything currently measured.
 
 
 <!-- ═════════════════════════════════════════════════════════════════════

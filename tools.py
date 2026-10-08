@@ -29,6 +29,7 @@ from utils.data_loader import load_listings
 _WORD_RE = re.compile(r"[a-z0-9]+")
 _APOSTROPHE_RE = re.compile(r"['’]")
 _SIZE_SPLIT_RE = re.compile(r"[\s/()]+")
+_SIZE_PAREN_RE = re.compile(r"\([^)]*\)")
 
 
 def _tokenize(text: str) -> set[str]:
@@ -38,7 +39,11 @@ def _tokenize(text: str) -> set[str]:
 
 
 def _size_tokens(size: str) -> set[str]:
-    return {token for token in _SIZE_SPLIT_RE.split(size.upper()) if token}
+    # Strip parenthetical notes ("XL (fits oversized)") before splitting, so
+    # commentary words like "fits" or "oversized" don't become matchable size
+    # tokens in their own right — only the size outside the parens counts.
+    cleaned = _SIZE_PAREN_RE.sub("", size)
+    return {token for token in _SIZE_SPLIT_RE.split(cleaned.upper()) if token}
 
 
 # ── Tool 1: search_listings ───────────────────────────────────────────────────
